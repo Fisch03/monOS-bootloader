@@ -1,0 +1,117 @@
+From 0b946db60717fc3c3b7d5ab7b7fdd7f08697afa3 Mon Sep 17 00:00:00 2001
+From: Fisch03 <derfisch03@gmail.com>
+Date: Sat, 29 Jun 2024 05:01:37 +0200
+Subject: [PATCH] wanted fb dimensions
+
+---
+ bios/stage-4/src/main.rs |  8 ++++----
+ common/config/src/lib.rs |  4 ++--
+ uefi/src/main.rs         | 22 +++++++++++-----------
+ 3 files changed, 17 insertions(+), 17 deletions(-)
+
+diff --git a/bios/stage-4/src/main.rs b/bios/stage-4/src/main.rs
+index cf159a6..ead5d9e 100644
+--- a/bios/stage-4/src/main.rs
++++ b/bios/stage-4/src/main.rs
+@@ -131,13 +131,13 @@ pub extern "C" fn _start(info: &mut BiosInfo) -> ! {
+     };
+ 
+     #[allow(deprecated)]
+-    if config.frame_buffer.minimum_framebuffer_height.is_none() {
+-        config.frame_buffer.minimum_framebuffer_height =
++    if config.frame_buffer.wanted_framebuffer_height.is_none() {
++        config.frame_buffer.wanted_framebuffer_height =
+             kernel.config.frame_buffer.minimum_framebuffer_height;
+     }
+     #[allow(deprecated)]
+-    if config.frame_buffer.minimum_framebuffer_width.is_none() {
+-        config.frame_buffer.minimum_framebuffer_width =
++    if config.frame_buffer.wanted_framebuffer_width.is_none() {
++        config.frame_buffer.wanted_framebuffer_width =
+             kernel.config.frame_buffer.minimum_framebuffer_width;
+     }
+     let framebuffer_info = init_logger(
+diff --git a/common/config/src/lib.rs b/common/config/src/lib.rs
+index 1b29433..1b7585e 100644
+--- a/common/config/src/lib.rs
++++ b/common/config/src/lib.rs
+@@ -48,11 +48,11 @@ pub struct FrameBuffer {
+     /// Instructs the bootloader to set up a framebuffer format that has at least the given height.
+     ///
+     /// If this is not possible, the bootloader will fall back to a smaller format.
+-    pub minimum_framebuffer_height: Option<u64>,
++    pub wanted_framebuffer_height: Option<u64>,
+     /// Instructs the bootloader to set up a framebuffer format that has at least the given width.
+     ///
+     /// If this is not possible, the bootloader will fall back to a smaller format.
+-    pub minimum_framebuffer_width: Option<u64>,
++    pub wanted_framebuffer_width: Option<u64>,
+ }
+ 
+ /// An enum representing the available verbosity level filters of the logger.
+diff --git a/uefi/src/main.rs b/uefi/src/main.rs
+index 93dfb6c..c88a5c5 100644
+--- a/uefi/src/main.rs
++++ b/uefi/src/main.rs
+@@ -16,7 +16,7 @@ use core::{
+ use uefi::{
+     prelude::{entry, Boot, Handle, Status, SystemTable},
+     proto::{
+-        console::gop::{GraphicsOutput, PixelFormat},
++        console::gop::{GraphicsOutput, Mode as GopMode, PixelFormat},
+         device_path::DevicePath,
+         loaded_image::LoadedImage,
+         media::{
+@@ -97,13 +97,13 @@ fn main_inner(image: Handle, mut st: SystemTable<Boot>) -> Status {
+     };
+ 
+     #[allow(deprecated)]
+-    if config.frame_buffer.minimum_framebuffer_height.is_none() {
+-        config.frame_buffer.minimum_framebuffer_height =
++    if config.frame_buffer.wanted_framebuffer_height.is_none() {
++        config.frame_buffer.wanted_framebuffer_height =
+             kernel.config.frame_buffer.minimum_framebuffer_height;
+     }
+     #[allow(deprecated)]
+-    if config.frame_buffer.minimum_framebuffer_width.is_none() {
+-        config.frame_buffer.minimum_framebuffer_width =
++    if config.frame_buffer.wanted_framebuffer_width.is_none() {
++        config.frame_buffer.wanted_framebuffer_width =
+             kernel.config.frame_buffer.minimum_framebuffer_width;
+     }
+     let framebuffer = init_logger(image, &st, &config);
+@@ -475,25 +475,25 @@ fn init_logger(
+         match (
+             config
+                 .frame_buffer
+-                .minimum_framebuffer_height
++                .wanted_framebuffer_height
+                 .map(|v| usize::try_from(v).unwrap()),
+             config
+                 .frame_buffer
+-                .minimum_framebuffer_width
++                .wanted_framebuffer_width
+                 .map(|v| usize::try_from(v).unwrap()),
+         ) {
+             (Some(height), Some(width)) => modes
+                 .filter(|m| {
+                     let res = m.info().resolution();
+-                    res.1 >= height && res.0 >= width
++                    res.1 == height && res.0 == width
+                 })
+                 .last(),
+-            (Some(height), None) => modes.filter(|m| m.info().resolution().1 >= height).last(),
+-            (None, Some(width)) => modes.filter(|m| m.info().resolution().0 >= width).last(),
++            (Some(height), None) => modes.filter(|m| m.info().resolution().1 == height).last(),
++            (None, Some(width)) => modes.filter(|m| m.info().resolution().0 == width).last(),
+             _ => None,
+         }
+     };
+-    if let Some(mode) = mode {
++    if let Some(ref mode) = mode {
+         gop.set_mode(&mode)
+             .expect("Failed to apply the desired display mode");
+     }
+-- 
+2.45.2
+

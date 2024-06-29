@@ -48,11 +48,11 @@ pub struct FrameBuffer {
     /// Instructs the bootloader to set up a framebuffer format that has at least the given height.
     ///
     /// If this is not possible, the bootloader will fall back to a smaller format.
-    pub minimum_framebuffer_height: Option<u64>,
+    pub wanted_framebuffer_height: Option<u64>,
     /// Instructs the bootloader to set up a framebuffer format that has at least the given width.
     ///
     /// If this is not possible, the bootloader will fall back to a smaller format.
-    pub minimum_framebuffer_width: Option<u64>,
+    pub wanted_framebuffer_width: Option<u64>,
 }
 
 /// An enum representing the available verbosity level filters of the logger.

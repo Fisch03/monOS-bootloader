@@ -16,7 +16,7 @@ use core::{
 use uefi::{
     prelude::{entry, Boot, Handle, Status, SystemTable},
     proto::{
-        console::gop::{GraphicsOutput, PixelFormat},
+        console::gop::{GraphicsOutput, Mode as GopMode, PixelFormat},
         device_path::DevicePath,
         loaded_image::LoadedImage,
         media::{
@@ -97,13 +97,13 @@ fn main_inner(image: Handle, mut st: SystemTable<Boot>) -> Status {
     };
 
     #[allow(deprecated)]
-    if config.frame_buffer.minimum_framebuffer_height.is_none() {
-        config.frame_buffer.minimum_framebuffer_height =
+    if config.frame_buffer.wanted_framebuffer_height.is_none() {
+        config.frame_buffer.wanted_framebuffer_height =
             kernel.config.frame_buffer.minimum_framebuffer_height;
     }
     #[allow(deprecated)]
-    if config.frame_buffer.minimum_framebuffer_width.is_none() {
-        config.frame_buffer.minimum_framebuffer_width =
+    if config.frame_buffer.wanted_framebuffer_width.is_none() {
+        config.frame_buffer.wanted_framebuffer_width =
             kernel.config.frame_buffer.minimum_framebuffer_width;
     }
     let framebuffer = init_logger(image, &st, &config);
@@ -475,25 +475,25 @@ fn init_logger(
         match (
             config
                 .frame_buffer
-                .minimum_framebuffer_height
+                .wanted_framebuffer_height
                 .map(|v| usize::try_from(v).unwrap()),
             config
                 .frame_buffer
-                .minimum_framebuffer_width
+                .wanted_framebuffer_width
                 .map(|v| usize::try_from(v).unwrap()),
         ) {
             (Some(height), Some(width)) => modes
                 .filter(|m| {
                     let res = m.info().resolution();
-                    res.1 >= height && res.0 >= width
+                    res.1 == height && res.0 == width
                 })
                 .last(),
-            (Some(height), None) => modes.filter(|m| m.info().resolution().1 >= height).last(),
-            (None, Some(width)) => modes.filter(|m| m.info().resolution().0 >= width).last(),
+            (Some(height), None) => modes.filter(|m| m.info().resolution().1 == height).last(),
+            (None, Some(width)) => modes.filter(|m| m.info().resolution().0 == width).last(),
             _ => None,
         }
     };
-    if let Some(mode) = mode {
+    if let Some(ref mode) = mode {
         gop.set_mode(&mode)
             .expect("Failed to apply the desired display mode");
     }
